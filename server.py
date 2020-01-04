@@ -5,11 +5,12 @@ import aiofiles
 import os
 import logging
 import argparse
+from functools import partial
 
 CHUNK_SIZE = 1000
 
 
-async def archivate(request):
+async def archivate(request, photos_folder, download_delay):
     response = web.StreamResponse()
 
     response.headers['Content-Type'] = 'application/zip'
@@ -35,10 +36,12 @@ async def archivate(request):
             await asyncio.sleep(download_delay)
     except asyncio.CancelledError:
         logging.debug('Download was interrupted')
-        archiving_proc.kill()
+        raise
     finally:
         response.force_close()
+        archiving_proc.kill()
     return response
+
 
 async def handle_index_page(request):
     async with aiofiles.open('index.html', mode='r') as index_file:
@@ -62,10 +65,15 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.CRITICAL)
     download_delay = args.delay
     photos_folder = args.photos_folder
+    archivate_partial = partial(
+                                archivate, 
+                                photos_folder=photos_folder, 
+                                download_delay=download_delay
+                                )
 
     app = web.Application()
     app.add_routes([
         web.get('/', handle_index_page),
-        web.get('/archive/{archive_hash}/', archivate)
+        web.get('/archive/{archive_hash}/', archivate_partial)
     ])
     web.run_app(app)
