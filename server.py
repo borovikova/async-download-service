@@ -39,7 +39,9 @@ async def archivate(request, photos_folder, download_delay):
         raise
     finally:
         response.force_close()
-        archiving_proc.kill()
+        if archiving_proc.returncode is None:
+            archiving_proc.kill()
+            logging.debug('Process killed')
     return response
 
 
@@ -53,11 +55,17 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
         description='Photo downloading microservice')
-    parser.add_argument('--logging', default='on', type=str,
+    parser.add_argument('--logging',
+                        default='on',
+                        type=str,
                         help='Shows the debug messages')
-    parser.add_argument('--photos_folder', default='test_photos',
-                        type=str, help='Path to the folder with photos')
-    parser.add_argument('--delay', default=0, type=int,
+    parser.add_argument('--photos_folder',
+                        default='test_photos',
+                        type=str,
+                        help='Path to the folder with photos')
+    parser.add_argument('--delay',
+                        default=0,
+                        type=int,
                         help='Number of seconds to delay the downloading of each archive chunk')
     args = parser.parse_args()
     logging.basicConfig(level=logging.DEBUG)
@@ -66,10 +74,10 @@ if __name__ == '__main__':
     download_delay = args.delay
     photos_folder = args.photos_folder
     archivate_partial = partial(
-                                archivate, 
-                                photos_folder=photos_folder, 
-                                download_delay=download_delay
-                                )
+        archivate,
+        photos_folder=photos_folder,
+        download_delay=download_delay
+    )
 
     app = web.Application()
     app.add_routes([
