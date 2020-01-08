@@ -22,10 +22,9 @@ async def archivate(request, photos_folder, download_delay):
     archive_path = os.path.join(photos_folder, archive_hash)
     if not os.path.isdir(archive_path):
         raise web.HTTPNotFound(text='Archive not found')
-    archiving_proc = await asyncio.create_subprocess_shell(
-        'zip -r - {}'.format(archive_path),
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE)
+    archiving_proc = await asyncio.create_subprocess_exec('zip', '-r', '-', archive_path,
+                                                          stdout=asyncio.subprocess.PIPE,
+                                                          stderr=asyncio.subprocess.PIPE)
     try:
         while True:
             logging.debug('Sending archive chunk')
@@ -41,7 +40,6 @@ async def archivate(request, photos_folder, download_delay):
         response.force_close()
         if archiving_proc.returncode is None:
             archiving_proc.kill()
-            logging.debug('Process killed')
     return response
 
 
